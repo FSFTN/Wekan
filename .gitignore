@@ -4,3 +4,5 @@
 .tx/
 *.sublime-workspace
 tmp/
+mup.json
+settings.json
