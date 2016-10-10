@@ -1,14 +1,10 @@
-Template.headerTitle.events({
+Template.boardListHeaderBar.events({
   'click .js-open-archived-board'() {
     Modal.open('archivedBoards');
   },
 });
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'archivedBoards';
-  },
-
   onCreated() {
     this.subscribe('archivedBoards');
   },

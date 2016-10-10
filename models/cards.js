@@ -9,6 +9,11 @@ Cards.attachSchema(new SimpleSchema({
   },
   archived: {
     type: Boolean,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return false;
+      }
+    },
   },
   listId: {
     type: String,
@@ -25,10 +30,19 @@ Cards.attachSchema(new SimpleSchema({
   },
   createdAt: {
     type: Date,
-    denyUpdate: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
   },
   dateLastActivity: {
     type: Date,
+    autoValue() {
+      return new Date();
+    },
   },
   description: {
     type: String,
@@ -46,6 +60,11 @@ Cards.attachSchema(new SimpleSchema({
   // the `members` field?
   userId: {
     type: String,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return this.userId;
+      }
+    },
   },
   sort: {
     type: Number,
@@ -108,20 +127,19 @@ Cards.helpers({
   },
 
   cover() {
-    return Attachments.findOne(this.coverId);
+    const cover = Attachments.findOne(this.coverId);
+    // if we return a cover before it is fully stored, we will get errors when we try to display it
+    // todo XXX we could return a default "upload pending" image in the meantime?
+    return cover && cover.url() && cover;
   },
 
   absoluteUrl() {
     const board = this.board();
-    return FlowRouter.path('card', {
+    return FlowRouter.url('card', {
       boardId: board._id,
       slug: board.slug,
       cardId: this._id,
     });
-  },
-
-  rootUrl() {
-    return Meteor.absoluteUrl(this.absoluteUrl().replace('/', ''));
   },
 });
 
@@ -191,17 +209,13 @@ Cards.mutations({
   },
 });
 
-Cards.before.insert((userId, doc) => {
-  doc.createdAt = new Date();
-  doc.dateLastActivity = new Date();
-  doc.archived = false;
-
-  if (!doc.userId) {
-    doc.userId = userId;
-  }
-});
-
 if (Meteor.isServer) {
+  // Cards are often fetched within a board, so we create an index to make these
+  // queries more efficient.
+  Meteor.startup(() => {
+    Cards._collection._ensureIndex({ boardId: 1 });
+  });
+
   Cards.after.insert((userId, doc) => {
     Activities.insert({
       userId,

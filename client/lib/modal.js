@@ -6,8 +6,14 @@ window.Modal = new class {
     this._onCloseGoTo = '';
   }
 
+  getHeaderName() {
+    const currentModal = this._currentModal.get();
+    return currentModal && currentModal.header;
+  }
+
   getTemplateName() {
-    return this._currentModal.get();
+    const currentModal = this._currentModal.get();
+    return currentModal && currentModal.modalName;
   }
 
   isOpen() {
@@ -21,9 +27,9 @@ window.Modal = new class {
     }
   }
 
-  open(modalName, options) {
-    this._currentModal.set(modalName);
-    this._onCloseGoTo = options && options.onCloseGoTo || '';
+  open(modalName, { header = '', onCloseGoTo = ''} = {}) {
+    this._currentModal.set({ header, modalName });
+    this._onCloseGoTo = onCloseGoTo;
   }
 };
 

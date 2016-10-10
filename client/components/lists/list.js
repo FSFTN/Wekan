@@ -1,13 +1,9 @@
 const { calculateIndex } = Utils;
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'list';
-  },
-
   // Proxy
   openForm(options) {
-    this.componentChildren('listBody')[0].openForm(options);
+    this.childComponents('listBody')[0].openForm(options);
   },
 
   onCreated() {
@@ -22,10 +18,7 @@ BlazeComponent.extendComponent({
   // callback, we basically solve all issues related to reactive updates. A
   // comment below provides further details.
   onRendered() {
-    if (!Meteor.user() || !Meteor.user().isBoardMember())
-      return;
-
-    const boardComponent = this.componentParent();
+    const boardComponent = this.parentComponent();
     const itemsSelector = '.js-minicard:not(.placeholder, .js-card-composer)';
     const $cards = this.$('.js-minicards');
     $cards.sortable({
@@ -83,6 +76,15 @@ BlazeComponent.extendComponent({
         }
         boardComponent.setIsDragging(false);
       },
+    });
+
+    function userIsMember() {
+      return Meteor.user() && Meteor.user().isBoardMember();
+    }
+
+    // Disable drag-dropping if the current user is not a board member
+    this.autorun(() => {
+      $cards.sortable('option', 'disabled', !userIsMember());
     });
 
     // We want to re-run this function any time a card is added.

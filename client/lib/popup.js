@@ -1,10 +1,3 @@
-// A simple tracker dependency that we invalidate every time the window is
-// resized. This is used to reactively re-calculate the popup position in case
-// of a window resize. This is the equivalent of a "Signal" in some other
-// programming environments (eg, elm).
-const windowResizeDep = new Tracker.Dependency();
-$(window).on('resize', () => windowResizeDep.changed());
-
 window.Popup = new class {
   constructor() {
     // The template we use to render popups
@@ -45,7 +38,8 @@ window.Popup = new class {
       if (self.isOpen()) {
         const previousOpenerElement = self._getTopStack().openerElement;
         if (previousOpenerElement === evt.currentTarget) {
-          return self.close();
+          self.close();
+          return;
         } else {
           $(previousOpenerElement).removeClass('is-active');
         }
@@ -81,7 +75,7 @@ window.Popup = new class {
 
       // If there are no popup currently opened we use the Blaze API to render
       // one into the DOM. We use a reactive function as the data parameter that
-      // return the the complete along with its top element and depends on our
+      // return the complete along with its top element and depends on our
       // internal dependency that is being invalidated every time the top
       // element of the stack has changed and we want to update the popup.
       //
@@ -91,7 +85,7 @@ window.Popup = new class {
       if (!self.isOpen()) {
         self.current = Blaze.renderWithData(self.template, () => {
           self._dep.depend();
-          return _.extend(self._getTopStack(), { stack: self._stack });
+          return { ...self._getTopStack(), stack: self._stack };
         }, document.body);
 
       } else {
@@ -149,6 +143,11 @@ window.Popup = new class {
     }
   }
 
+  getOpenerComponent() {
+    const { openerElement } = Template.parentData(4);
+    return BlazeComponent.getComponentForElement(openerElement);
+  }
+
   // An utility fonction that returns the top element of the internal stack
   _getTopStack() {
     return this._stack[this._stack.length - 1];
@@ -160,7 +159,10 @@ window.Popup = new class {
   _getOffset(element) {
     const $element = $(element);
     return () => {
-      windowResizeDep.depend();
+      Utils.windowResizeDep.depend();
+
+      if(Utils.isMiniScreen()) return { left:0, top:0 };
+
       const offset = $element.offset();
       const popupWidth = 300 + 15;
       return {
@@ -183,7 +185,9 @@ window.Popup = new class {
       // was available and returns `false`. There is a (small) risk a false
       // positives.
       const title = TAPi18n.__(translationKey);
-      return title !== translationKey ? title : false;
+      // when popup showed as full of small screen, we need a default header to clearly see [X] button
+      const defaultTitle = Utils.isMiniScreen() ? 'Wekan' : false;
+      return title !== translationKey ? title : defaultTitle;
     };
   }
 };
@@ -191,7 +195,7 @@ window.Popup = new class {
 // We close a potential opened popup on any left click on the document, or go
 // one step back by pressing escape.
 const escapeActions = ['back', 'close'];
-_.each(escapeActions, (actionName) => {
+escapeActions.forEach((actionName) => {
   EscapeActions.register(`popup-${actionName}`,
     () => Popup[actionName](),
     () => Popup.isOpen(),

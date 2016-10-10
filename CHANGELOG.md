@@ -1,9 +1,66 @@
-# NEXT — v0.9
+# v0.11
 
-This release is a large re-write of the previous code base. Despite being
-relatively similar to v0.8 feature-wise, this release marks the beginning of our
-new user interface and continues to improve the overall performance and
-security. It also features the following improvements:
+This release adds the following new features:
+
+* Notification system with email notifications of the changes in a board,
+  a list or on a card;
+* Show the exact time when hovering the activity time;
+* Allow to edit more easily longer card titles by resizing the input box;
+* Add shortcuts to move cards to the top or the bottom of a list;
+* Add a warning indicator when the application is offline;
+* A new log-in button on the public board view to sign in, even if the board
+  is published;
+
+and fixes the following bugs:
+
+* Fix the syntax of the `docker-compose.yml`;
+* Use the correct pluralization of emoji;
+* Only publish required user data and keep the hashed passwords confidential;
+* Fix the generation and alignment of the initials avatars;
+* Fix the “welcome board” feature;
+* Only display the buttons in the board header, if the data is available
+  and the user is able to use it;
+* Fix the scaling of cover images;
+* Fix bugs on Internet Explorer v11 that blocked card creation and activity feed
+  visualization.
+
+Thanks to GitHub users alayek, AlexanderS, choclin, floatinghotpot, ForNeVeR,
+PeterDaveHello, seschwar, and TheElf for their contributions.
+
+# v0.10.1
+
+This patch release fixes two bugs on Sandstorm:
+
+* Drag and drop was broken;
+* Avatars weren’t working.
+
+# v0.10
+
+This release features:
+
+* Trello boards importation, including card history, assigned members, labels,
+  comments, and attachments;
+* Invite new users to a board using a email address;
+* Autocompletion in the minicard editor. Start with <kbd>@</kbd> to start a
+  board member autocompletion, or <kbd>#</kbd> for a label;
+* Improve the user interface on small screens so that Wekan could be used on the
+  mobile web;
+* Accelerate the initial page rendering by sending the data on the intial HTTP
+  response instead of waiting for the DDP connection to open;
+* Support images attachments copy pasting;
+* On Sandstorm, expose the Wekan grain title and URL to the Sandstorm shell;
+* Support Wekan deployment under a sub-path of a domain name.
+
+New languages supported: Arabic, Catalan, Italian, and Russian.
+
+Thanks to GitHub users AlexanderS, fisle, floatinghotpot, FuzzyWuzzie, mnutt,
+ndarilek, SirCmpwn, and xavierpriour for their contributions.
+
+# v0.9
+
+This release is a large re-write of the previous code base. This release marks
+the beginning of our new user interface and continues to improve the overall
+performance and security. It also features the following improvements:
 
 * A new user account system, including the possibility to reset a forgotten
   password, to change the password, or to enable email confirmation (all of
@@ -70,8 +127,8 @@ the popover was new). New features includes:
 * Assign and unassign members to cards;
 * Archive cards (though restoration is not yet possible);
 * Board stars;
-* Markdown and emojies support in comments and card description;
-* Emojies auto-completion in the text editor;
+* Markdown and emoji support in comments and card description;
+* Emoji auto-completion in the text editor;
 * Some keyboard shortcuts (eg `Ctrl`+`Enter` to submit a multi-line input).
 
 We also introduced basic support for the [Sandstorm](https://sandstorm.io)

@@ -1,12 +1,116 @@
 Users = Meteor.users;
 
+Users.attachSchema(new SimpleSchema({
+  username: {
+    type: String,
+    optional: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        const name = this.field('profile.fullname');
+        if (name.isSet) {
+          return name.value.toLowerCase().replace(/\s/g, '');
+        }
+      }
+    },
+  },
+  emails: {
+    type: [Object],
+    optional: true,
+  },
+  'emails.$.address': {
+    type: String,
+    regEx: SimpleSchema.RegEx.Email,
+  },
+  'emails.$.verified': {
+    type: Boolean,
+  },
+  createdAt: {
+    type: Date,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert) {
+        return new Date();
+      } else {
+        this.unset();
+      }
+    },
+  },
+  profile: {
+    type: Object,
+    optional: true,
+    autoValue() { // eslint-disable-line consistent-return
+      if (this.isInsert && !this.isSet) {
+        return {};
+      }
+    },
+  },
+  'profile.avatarUrl': {
+    type: String,
+    optional: true,
+  },
+  'profile.emailBuffer': {
+    type: [String],
+    optional: true,
+  },
+  'profile.fullname': {
+    type: String,
+    optional: true,
+  },
+  'profile.initials': {
+    type: String,
+    optional: true,
+  },
+  'profile.invitedBoards': {
+    type: [String],
+    optional: true,
+  },
+  'profile.language': {
+    type: String,
+    optional: true,
+  },
+  'profile.notifications': {
+    type: [String],
+    optional: true,
+  },
+  'profile.starredBoards': {
+    type: [String],
+    optional: true,
+  },
+  'profile.tags': {
+    type: [String],
+    optional: true,
+  },
+  services: {
+    type: Object,
+    optional: true,
+    blackbox: true,
+  },
+  heartbeat: {
+    type: Date,
+    optional: true,
+  },
+}));
+
 // Search a user in the complete server database by its name or username. This
 // is used for instance to add a new user to a board.
-const searchInFields = ['username', 'profile.name'];
+const searchInFields = ['username', 'profile.fullname'];
 Users.initEasySearch(searchInFields, {
   use: 'mongo-db',
   returnFields: [...searchInFields, 'profile.avatarUrl'],
 });
+
+if (Meteor.isClient) {
+  Users.helpers({
+    isBoardMember() {
+      const board = Boards.findOne(Session.get('currentBoard'));
+      return board && board.hasMember(this._id);
+    },
+
+    isBoardAdmin() {
+      const board = Boards.findOne(Session.get('currentBoard'));
+      return board && board.hasAdmin(this._id);
+    },
+  });
+}
 
 Users.helpers({
   boards() {
@@ -14,25 +118,38 @@ Users.helpers({
   },
 
   starredBoards() {
-    const starredBoardIds = this.profile.starredBoards || [];
-    return Boards.find({archived: false, _id: {$in: starredBoardIds}});
+    const {starredBoards = []} = this.profile;
+    return Boards.find({archived: false, _id: {$in: starredBoards}});
   },
 
   hasStarred(boardId) {
-    const starredBoardIds = this.profile.starredBoards || [];
-    return _.contains(starredBoardIds, boardId);
+    const {starredBoards = []} = this.profile;
+    return _.contains(starredBoards, boardId);
   },
 
-  isBoardMember() {
-    const board = Boards.findOne(Session.get('currentBoard'));
-    return board && _.contains(_.pluck(board.members, 'userId'), this._id) &&
-                         _.where(board.members, {userId: this._id})[0].isActive;
+  invitedBoards() {
+    const {invitedBoards = []} = this.profile;
+    return Boards.find({archived: false, _id: {$in: invitedBoards}});
   },
 
-  isBoardAdmin() {
-    const board = Boards.findOne(Session.get('currentBoard'));
-    return board && this.isBoardMember(board) &&
-                          _.where(board.members, {userId: this._id})[0].isAdmin;
+  isInvitedTo(boardId) {
+    const {invitedBoards = []} = this.profile;
+    return _.contains(invitedBoards, boardId);
+  },
+
+  hasTag(tag) {
+    const {tags = []} = this.profile;
+    return _.contains(tags, tag);
+  },
+
+  hasNotification(activityId) {
+    const {notifications = []} = this.profile;
+    return _.contains(notifications, activityId);
+  },
+
+  getEmailBuffer() {
+    const {emailBuffer = []} = this.profile;
+    return emailBuffer;
   },
 
   getInitials() {
@@ -41,13 +158,23 @@ Users.helpers({
       return profile.initials;
 
     else if (profile.fullname) {
-      return _.reduce(profile.fullname.split(/\s+/), (memo, word) => {
+      return profile.fullname.split(/\s+/).reduce((memo, word) => {
         return memo + word[0];
       }, '').toUpperCase();
 
     } else {
       return this.username[0].toUpperCase();
     }
+  },
+
+  getName() {
+    const profile = this.profile || {};
+    return profile.fullname || this.username;
+  },
+
+  getLanguage() {
+    const profile = this.profile || {};
+    return profile.language || 'en';
   },
 });
 
@@ -57,6 +184,77 @@ Users.mutations({
     return {
       [queryKind]: {
         'profile.starredBoards': boardId,
+      },
+    };
+  },
+
+  addInvite(boardId) {
+    return {
+      $addToSet: {
+        'profile.invitedBoards': boardId,
+      },
+    };
+  },
+
+  removeInvite(boardId) {
+    return {
+      $pull: {
+        'profile.invitedBoards': boardId,
+      },
+    };
+  },
+
+  addTag(tag) {
+    return {
+      $addToSet: {
+        'profile.tags': tag,
+      },
+    };
+  },
+
+  removeTag(tag) {
+    return {
+      $pull: {
+        'profile.tags': tag,
+      },
+    };
+  },
+
+  toggleTag(tag) {
+    if (this.hasTag(tag))
+      this.removeTag(tag);
+    else
+      this.addTag(tag);
+  },
+
+  addNotification(activityId) {
+    return {
+      $addToSet: {
+        'profile.notifications': activityId,
+      },
+    };
+  },
+
+  removeNotification(activityId) {
+    return {
+      $pull: {
+        'profile.notifications': activityId,
+      },
+    };
+  },
+
+  addEmailBuffer(text) {
+    return {
+      $addToSet: {
+        'profile.emailBuffer': text,
+      },
+    };
+  },
+
+  clearEmailBuffer() {
+    return {
+      $set: {
+        'profile.emailBuffer': [],
       },
     };
   },
@@ -78,13 +276,78 @@ Meteor.methods({
   },
 });
 
-Users.before.insert((userId, doc) => {
-  doc.profile = doc.profile || {};
+if (Meteor.isServer) {
+  Meteor.methods({
+    // we accept userId, username, email
+    inviteUserToBoard(username, boardId) {
+      check(username, String);
+      check(boardId, String);
 
-  if (!doc.username && doc.profile.name) {
-    doc.username = doc.profile.name.toLowerCase().replace(/\s/g, '');
-  }
-});
+      const inviter = Meteor.user();
+      const board = Boards.findOne(boardId);
+      const allowInvite = inviter &&
+          board &&
+          board.members &&
+          _.contains(_.pluck(board.members, 'userId'), inviter._id) &&
+          _.where(board.members, {userId: inviter._id})[0].isActive &&
+          _.where(board.members, {userId: inviter._id})[0].isAdmin;
+      if (!allowInvite) throw new Meteor.Error('error-board-notAMember');
+
+      this.unblock();
+
+      const posAt = username.indexOf('@');
+      let user = null;
+      if (posAt>=0) {
+        user = Users.findOne({emails: {$elemMatch: {address: username}}});
+      } else {
+        user = Users.findOne(username) || Users.findOne({ username });
+      }
+      if (user) {
+        if (user._id === inviter._id) throw new Meteor.Error('error-user-notAllowSelf');
+      } else {
+        if (posAt <= 0) throw new Meteor.Error('error-user-doesNotExist');
+
+        const email = username;
+        username = email.substring(0, posAt);
+        const newUserId = Accounts.createUser({ username, email });
+        if (!newUserId) throw new Meteor.Error('error-user-notCreated');
+        // assume new user speak same language with inviter
+        if (inviter.profile && inviter.profile.language) {
+          Users.update(newUserId, {
+            $set: {
+              'profile.language': inviter.profile.language,
+            },
+          });
+        }
+        Accounts.sendEnrollmentEmail(newUserId);
+        user = Users.findOne(newUserId);
+      }
+
+      board.addMember(user._id);
+      user.addInvite(boardId);
+
+      try {
+        const params = {
+          user: user.username,
+          inviter: inviter.username,
+          board: board.title,
+          url: board.absoluteUrl(),
+        };
+        const lang = user.getLanguage();
+        Email.send({
+          to: user.emails[0].address,
+          from: Accounts.emailTemplates.from,
+          subject: TAPi18n.__('email-invite-subject', params, lang),
+          text: TAPi18n.__('email-invite-text', params, lang),
+        });
+      } catch (e) {
+        throw new Meteor.Error('email-fail', e.message);
+      }
+
+      return { username: user.username, email: user.emails[0].address };
+    },
+  });
+}
 
 if (Meteor.isServer) {
   // Let mongoDB ensure username unicity
@@ -117,7 +380,7 @@ if (Meteor.isServer) {
     // b. We use it to find deleted and newly inserted ids by using it in one
     // direction and then in the other.
     function incrementBoards(boardsIds, inc) {
-      _.forEach(boardsIds, (boardId) => {
+      boardsIds.forEach((boardId) => {
         Boards.update(boardId, {$inc: {stars: inc}});
       });
     }
@@ -125,32 +388,29 @@ if (Meteor.isServer) {
     incrementBoards(_.difference(newIds, oldIds), +1);
   });
 
-  // XXX i18n
+  const fakeUserId = new Meteor.EnvironmentVariable();
+  const getUserId = CollectionHooks.getUserId;
+  CollectionHooks.getUserId = () => {
+    return fakeUserId.get() || getUserId();
+  };
+
   Users.after.insert((userId, doc) => {
-    const ExampleBoard = {
-      title: 'Welcome Board',
-      userId: doc._id,
-      permission: 'private',
+    const fakeUser = {
+      extendAutoValueContext: {
+        userId: doc._id,
+      },
     };
 
-    // Insert the Welcome Board
-    Boards.insert(ExampleBoard, (err, boardId) => {
+    fakeUserId.withValue(doc._id, () => {
+      // Insert the Welcome Board
+      Boards.insert({
+        title: TAPi18n.__('welcome-board'),
+        permission: 'private',
+      }, fakeUser, (err, boardId) => {
 
-      _.forEach(['Basics', 'Advanced'], (title) => {
-        const list = {
-          title,
-          boardId,
-          userId: ExampleBoard.userId,
-
-          // XXX Not certain this is a bug, but we except these fields get
-          // inserted by the Lists.before.insert collection-hook. Since this
-          // hook is not called in this case, we have to dublicate the logic and
-          // set them here.
-          archived: false,
-          createdAt: new Date(),
-        };
-
-        Lists.insert(list);
+        ['welcome-list1', 'welcome-list2'].forEach((title) => {
+          Lists.insert({ title: TAPi18n.__(title), boardId }, fakeUser);
+        });
       });
     });
   });

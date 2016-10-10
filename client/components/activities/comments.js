@@ -1,10 +1,6 @@
 const commentFormIsOpen = new ReactiveVar(false);
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'commentForm';
-  },
-
   onDestroyed() {
     commentFormIsOpen.set(false);
   },
@@ -24,11 +20,12 @@ BlazeComponent.extendComponent({
       },
       'submit .js-new-comment-form'(evt) {
         const input = this.getInput();
-        if ($.trim(input.val())) {
+        const text = input.val().trim();
+        if (text) {
           CardComments.insert({
+            text,
             boardId: this.currentData().boardId,
             cardId: this.currentData()._id,
-            text: input.val(),
           });
           resetCommentInput(input);
           Tracker.flush();
@@ -72,8 +69,9 @@ EscapeActions.register('inlinedForm',
       docId: Session.get('currentCard'),
     };
     const commentInput = $('.js-new-comment-input');
-    if ($.trim(commentInput.val())) {
-      UnsavedEdits.set(draftKey, commentInput.val());
+    const draft = commentInput.val().trim();
+    if (draft) {
+      UnsavedEdits.set(draftKey, draft);
     } else {
       UnsavedEdits.reset(draftKey);
     }

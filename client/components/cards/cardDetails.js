@@ -1,31 +1,36 @@
 BlazeComponent.extendComponent({
-  template() {
-    return 'cardDetails';
-  },
-
   mixins() {
     return [Mixins.InfiniteScrolling, Mixins.PerfectScrollbar];
   },
 
   calculateNextPeak() {
-    const altitude = this.find('.js-card-details').scrollHeight;
-    this.callFirstWith(this, 'setNextPeak', altitude);
+    const cardElement = this.find('.js-card-details');
+    if (cardElement) {
+      const altitude = cardElement.scrollHeight;
+      this.callFirstWith(this, 'setNextPeak', altitude);
+    }
   },
 
   reachNextPeak() {
-    const activitiesComponent = this.componentChildren('activities')[0];
+    const activitiesComponent = this.childComponents('activities')[0];
     activitiesComponent.loadNextPage();
   },
 
   onCreated() {
     this.isLoaded = new ReactiveVar(false);
-    this.componentParent().showOverlay.set(true);
-    this.componentParent().mouseHasEnterCardDetails = false;
+    this.parentComponent().showOverlay.set(true);
+    this.parentComponent().mouseHasEnterCardDetails = false;
+    this.calculateNextPeak();
+  },
+
+  isWatching() {
+    const card = this.currentData();
+    return card.findWatcher(Meteor.userId());
   },
 
   scrollParentContainer() {
     const cardPanelWidth = 510;
-    const bodyBoardComponent = this.componentParent();
+    const bodyBoardComponent = this.parentComponent();
 
     const $cardContainer = bodyBoardComponent.$('.js-lists');
     const $cardView = this.$(this.firstNode());
@@ -48,21 +53,22 @@ BlazeComponent.extendComponent({
   },
 
   onRendered() {
-    this.scrollParentContainer();
+    if (!Utils.isMiniScreen()) this.scrollParentContainer();
   },
 
   onDestroyed() {
-    this.componentParent().showOverlay.set(false);
+    this.parentComponent().showOverlay.set(false);
   },
 
   events() {
     const events = {
-      [`${CSSEvents.animationend} .js-card-details`]() {
+      [`${CSSEvents.transitionend} .js-card-details`]() {
         this.isLoaded.set(true);
       },
     };
 
-    return [_.extend(events, {
+    return [{
+      ...events,
       'click .js-close-card-details'() {
         Utils.goBoardId(this.data().boardId);
       },
@@ -74,8 +80,8 @@ BlazeComponent.extendComponent({
       },
       'submit .js-card-details-title'(evt) {
         evt.preventDefault();
-        const title = this.currentComponent().getValue();
-        if ($.trim(title)) {
+        const title = this.currentComponent().getValue().trim();
+        if (title) {
           this.data().setTitle(title);
         }
       },
@@ -83,10 +89,10 @@ BlazeComponent.extendComponent({
       'click .js-add-members': Popup.open('cardMembers'),
       'click .js-add-labels': Popup.open('cardLabels'),
       'mouseenter .js-card-details'() {
-        this.componentParent().showOverlay.set(true);
-        this.componentParent().mouseHasEnterCardDetails = true;
+        this.parentComponent().showOverlay.set(true);
+        this.parentComponent().mouseHasEnterCardDetails = true;
       },
-    })];
+    }];
   },
 }).register('cardDetails');
 
@@ -105,12 +111,12 @@ BlazeComponent.extendComponent({
 
   close(isReset = false) {
     if (this.isOpen.get() && !isReset) {
-      const draft = $.trim(this.getValue());
+      const draft = this.getValue().trim();
       if (draft !== Cards.findOne(Session.get('currentCard')).description) {
         UnsavedEdits.set(this._getUnsavedEditKey(), this.getValue());
       }
     }
-    super();
+    super.close();
   }
 
   reset() {
@@ -127,17 +133,53 @@ BlazeComponent.extendComponent({
   }
 }).register('inlinedCardDescription');
 
+Template.cardDetailsActionsPopup.helpers({
+  isWatching() {
+    return this.findWatcher(Meteor.userId());
+  },
+});
+
 Template.cardDetailsActionsPopup.events({
   'click .js-members': Popup.open('cardMembers'),
   'click .js-labels': Popup.open('cardLabels'),
   'click .js-attachments': Popup.open('cardAttachments'),
   'click .js-move-card': Popup.open('moveCard'),
+  'click .js-move-card-to-top'(evt) {
+    evt.preventDefault();
+    const minOrder = _.min(this.list().cards().map((c) => c.sort));
+    this.move(this.listId, minOrder - 1);
+  },
+  'click .js-move-card-to-bottom'(evt) {
+    evt.preventDefault();
+    const maxOrder = _.max(this.list().cards().map((c) => c.sort));
+    this.move(this.listId, maxOrder + 1);
+  },
   'click .js-archive'(evt) {
     evt.preventDefault();
     this.archive();
     Popup.close();
   },
   'click .js-more': Popup.open('cardMore'),
+  'click .js-toggle-watch-card'() {
+    const currentCard = this;
+    const level = currentCard.findWatcher(Meteor.userId()) ? null : 'watching';
+    Meteor.call('watch', 'card', currentCard._id, level, (err, ret) => {
+      if (!err && ret) Popup.close();
+    });
+  },
+});
+
+Template.editCardTitleForm.onRendered(function() {
+  autosize(this.$('.js-edit-card-title'));
+});
+
+Template.editCardTitleForm.events({
+  'keydown .js-edit-card-title'(evt) {
+    // If enter key was pressed, submit the data
+    if (evt.keyCode === 13) {
+      $('.js-submit-edit-card-title-form').click();
+    }
+  },
 });
 
 Template.moveCardPopup.events({

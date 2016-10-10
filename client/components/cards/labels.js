@@ -4,18 +4,12 @@ Meteor.startup(() => {
 });
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'formLabel';
-  },
-
   onCreated() {
     this.currentColor = new ReactiveVar(this.data().color);
   },
 
   labels() {
-    return _.map(labelColors, (color) => {
-      return { color, name: '' };
-    });
+    return labelColors.map((color) => ({ color, name: '' }));
   },
 
   isSelected(color) {
@@ -69,12 +63,12 @@ Template.formLabel.events({
 Template.createLabelPopup.events({
   // Create the new label
   'submit .create-label'(evt, tpl) {
+    evt.preventDefault();
     const board = Boards.findOne(Session.get('currentBoard'));
     const name = tpl.$('#labelName').val().trim();
     const color = Blaze.getData(tpl.find('.fa-check')).color;
     board.addLabel(name, color);
     Popup.back();
-    evt.preventDefault();
   },
 });
 

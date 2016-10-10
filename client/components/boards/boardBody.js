@@ -1,10 +1,6 @@
 const subManager = new SubsManager();
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'board';
-  },
-
   onCreated() {
     this.draggingActive = new ReactiveVar(false);
     this.showOverlay = new ReactiveVar(false);
@@ -34,7 +30,7 @@ BlazeComponent.extendComponent({
   },
 
   openNewListForm() {
-    this.componentChildren('addListForm')[0].open();
+    this.childComponents('addListForm')[0].open();
   },
 
   // XXX Flow components allow us to avoid creating these two setter methods by
@@ -45,7 +41,8 @@ BlazeComponent.extendComponent({
   },
 
   scrollLeft(position = 0) {
-    this.$('.js-lists').animate({
+    const lists = this.$('.js-lists');
+    lists && lists.animate({
       scrollLeft: position,
     });
   },
@@ -54,6 +51,10 @@ BlazeComponent.extendComponent({
     const currentCard = Cards.findOne(Session.get('currentCard'));
     const listId = this.currentData()._id;
     return currentCard && currentCard.listId === listId;
+  },
+
+  onlyShowCurrentCard() {
+    return Utils.isMiniScreen() && Session.get('currentCard');
   },
 
   events() {
@@ -130,10 +131,7 @@ Template.boardBody.onRendered(function() {
     },
   };
 
-  if (!Meteor.user() || !Meteor.user().isBoardMember())
-    return;
-
-  self.$(self.listsDom).sortable({
+  $(self.listsDom).sortable({
     tolerance: 'pointer',
     helper: 'clone',
     handle: '.js-list-header',
@@ -145,7 +143,7 @@ Template.boardBody.onRendered(function() {
       Popup.close();
     },
     stop() {
-      self.$('.js-lists').find('.js-list:not(.js-list-composer)').each(
+      $(self.listsDom).find('.js-list:not(.js-list-composer)').each(
         (i, list) => {
           const data = Blaze.getData(list);
           Lists.update(data._id, {
@@ -158,43 +156,49 @@ Template.boardBody.onRendered(function() {
     },
   });
 
-  // Disable drag-dropping while in multi-selection mode
+  function userIsMember() {
+    return Meteor.user() && Meteor.user().isBoardMember();
+  }
+
+  // Disable drag-dropping while in multi-selection mode, or if the current user
+  // is not a board member
   self.autorun(() => {
-    self.$(self.listsDom).sortable('option', 'disabled',
-      MultiSelection.isActive());
+    const $listDom = $(self.listsDom);
+    if ($listDom.data('sortable')) {
+      $(self.listsDom).sortable('option', 'disabled',
+        MultiSelection.isActive() || !userIsMember());
+    }
   });
 
   // If there is no data in the board (ie, no lists) we autofocus the list
   // creation form by clicking on the corresponding element.
   const currentBoard = Boards.findOne(Session.get('currentBoard'));
-  if (currentBoard.lists().count() === 0) {
+  if (userIsMember() && currentBoard.lists().count() === 0) {
     self.openNewListForm();
   }
 });
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'addListForm';
-  },
-
   // Proxy
   open() {
-    this.componentChildren('inlinedForm')[0].open();
+    this.childComponents('inlinedForm')[0].open();
   },
 
   events() {
     return [{
       submit(evt) {
         evt.preventDefault();
-        const title = this.find('.list-name-input');
-        if ($.trim(title.value)) {
+        const titleInput = this.find('.list-name-input');
+        const title = titleInput.value.trim();
+        if (title) {
           Lists.insert({
-            title: title.value,
+            title,
             boardId: Session.get('currentBoard'),
             sort: $('.list').length,
           });
 
-          title.value = '';
+          titleInput.value = '';
+          titleInput.focus();
         }
       },
     }];

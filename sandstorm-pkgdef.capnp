@@ -22,10 +22,10 @@ const pkgdef :Spk.PackageDefinition = (
     appTitle = (defaultText = "Wekan"),
     # The name of the app as it is displayed to the user.
 
-    appVersion = 6,
+    appVersion = 12,
     # Increment this for every release.
 
-    appMarketingVersion = (defaultText = "0.9.0"),
+    appMarketingVersion = (defaultText = "0.11.0-rc2"),
     # Human-readable presentation of the app version.
 
     minUpgradableAppVersion = 0,
@@ -57,13 +57,13 @@ const pkgdef :Spk.PackageDefinition = (
         market = (svg = embed "meta/icons/wekan-150.svg"),
       ),
 
-      website = "http://libreboard.com",
+      website = "https://wekan.io",
       codeUrl = "https://github.com/wekan/wekan",
       license = (openSource = mit),
       categories = [productivity, office],
 
       author = (
-        contactEmail = "maxime@quandalle.com",
+        contactEmail = "mquandalle@wekan.io",
         pgpSignature = embed "meta/mquandalle-pgp-sig",
       ),
 
@@ -83,7 +83,7 @@ const pkgdef :Spk.PackageDefinition = (
       ],
 
       changeLog = (
-        defaultText = embed "History.md",
+        defaultText = embed "CHANGELOG.md",
         localizations = [
           (locale = "fr", text = embed "meta/t9n-changelog/fr.md"),
         ],

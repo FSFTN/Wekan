@@ -1,3 +1,5 @@
+@import 'nib'
+
 .minicard-wrapper
   cursor: pointer
   position: relative
@@ -60,16 +62,11 @@
   .minicard-cover
     background-position: center
     background-repeat: no-repeat
-    background-size: cover
+    background-size: contain
     height: 145px
     user-select: none
     margin: -6px -8px 6px -8px
     border-radius: top 2px
-    position: relative
-
-    img
-      height: 100%
-      width: 100%
 
   .minicard-labels
     float: right
@@ -133,5 +130,15 @@
       margin: 0
       padding: 0
       max-height: 162px
-      min-height: 54px
+      min-height: 36px
+      margin-bottom: 20px
       overflow-y: auto
+
+@media screen and (max-width: 800px)
+  .minicard
+    .is-selected &
+      transform: translateX(0px)
+      border-bottom-right-radius: 0
+      border-top-right-radius: 0
+      z-index: 15
+      box-shadow: 0 1px 2px rgba(0,0,0,.15)

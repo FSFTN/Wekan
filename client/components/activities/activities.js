@@ -1,15 +1,11 @@
 const activitiesPerPage = 20;
 
 BlazeComponent.extendComponent({
-  template() {
-    return 'activities';
-  },
-
   onCreated() {
     // XXX Should we use ReactiveNumber?
     this.page = new ReactiveVar(1);
     this.loadNextPageLocked = false;
-    const sidebar = this.componentParent(); // XXX for some reason not working
+    const sidebar = this.parentComponent(); // XXX for some reason not working
     sidebar.callFirstWith(null, 'resetNextPeak');
     this.autorun(() => {
       const mode = this.data().mode;
@@ -60,6 +56,24 @@ BlazeComponent.extendComponent({
     }, card.title));
   },
 
+  listLabel() {
+    return this.currentData().list().title;
+  },
+
+  sourceLink() {
+    const source = this.currentData().source;
+    if(source) {
+      if(source.url) {
+        return Blaze.toHTML(HTML.A({
+          href: source.url,
+        }, source.system));
+      } else {
+        return source.system;
+      }
+    }
+    return null;
+  },
+
   memberLink() {
     return Blaze.toHTMLWithData(Template.memberName, {
       user: this.currentData().member(),
@@ -68,8 +82,9 @@ BlazeComponent.extendComponent({
 
   attachmentLink() {
     const attachment = this.currentData().attachment();
-    return attachment && Blaze.toHTML(HTML.A({
-      href: attachment.url({ download: true }),
+    // trying to display url before file is stored generates js errors
+    return attachment && attachment.url({ download: true }) && Blaze.toHTML(HTML.A({
+      href: FlowRouter.path(attachment.url({ download: true })),
       target: '_blank',
     }, attachment.name()));
   },
@@ -83,9 +98,9 @@ BlazeComponent.extendComponent({
       },
       'submit .js-edit-comment'(evt) {
         evt.preventDefault();
-        const commentText = this.currentComponent().getValue();
+        const commentText = this.currentComponent().getValue().trim();
         const commentId = Template.parentData().commentId;
-        if ($.trim(commentText)) {
+        if (commentText) {
           CardComments.update(commentId, {
             $set: {
               text: commentText,

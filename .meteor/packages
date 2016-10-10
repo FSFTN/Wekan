@@ -2,17 +2,15 @@
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
-#
-# XXX Should we replace tmeasday:presence by 3stack:presence? Or maybe the
-# packages will merge in the future?
 
 meteor-base
 
 # Build system
 ecmascript
-standard-minifiers
+stylus
+standard-minifier-css
+standard-minifier-js
 mquandalle:jade
-mquandalle:stylus
 
 # Polyfills
 es5-shim
@@ -21,13 +19,13 @@ es5-shim
 aldeed:collection2
 cfs:gridfs
 cfs:standard-packages
+cottz:publish-relations
 dburles:collection-helpers
 idmontie:migrations
 matb33:collection-hooks
 matteodem:easy-search
 mongo
 mquandalle:collection-mutations
-reywood:publish-composite
 
 # Account system
 accounts-password
@@ -36,6 +34,7 @@ service-configuration
 useraccounts:core
 useraccounts:unstyled
 useraccounts:flow-routing
+email
 
 # Utilities
 check
@@ -50,7 +49,9 @@ alethes:pages
 arillo:flow-router-helpers
 audit-argument-checks
 kadira:blaze-layout
+kadira:dochead
 kadira:flow-router
+meteorhacks:fast-render
 meteorhacks:picker
 meteorhacks:subs-manager
 mquandalle:autofocus
@@ -68,8 +69,9 @@ mquandalle:jquery-textcomplete
 mquandalle:jquery-ui-drag-drop-sort
 mquandalle:mousetrap-bindglobal
 mquandalle:perfect-scrollbar
-peerlibrary:blaze-components
+peerlibrary:blaze-components@=0.15.1
 perak:markdown
 seriousm:emoji-continued
 templates:tabs
 verron:autosize
+simple:json-routes

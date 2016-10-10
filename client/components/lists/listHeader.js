@@ -1,15 +1,16 @@
 BlazeComponent.extendComponent({
-  template() {
-    return 'listHeader';
-  },
-
   editTitle(evt) {
     evt.preventDefault();
-    const newTitle = this.componentChildren('inlinedForm')[0].getValue();
+    const newTitle = this.childComponents('inlinedForm')[0].getValue().trim();
     const list = this.currentData();
-    if ($.trim(newTitle)) {
-      list.rename(newTitle);
+    if (newTitle) {
+      list.rename(newTitle.trim());
     }
+  },
+
+  isWatching() {
+    const list = this.currentData();
+    return list.findWatcher(Meteor.userId());
   },
 
   events() {
@@ -19,6 +20,12 @@ BlazeComponent.extendComponent({
     }];
   },
 }).register('listHeader');
+
+Template.listActionPopup.helpers({
+  isWatching() {
+    return this.findWatcher(Meteor.userId());
+  },
+});
 
 Template.listActionPopup.events({
   'click .js-add-card'() {
@@ -33,27 +40,16 @@ Template.listActionPopup.events({
     MultiSelection.add(cardIds);
     Popup.close();
   },
-  'click .js-move-cards': Popup.open('listMoveCards'),
-  'click .js-archive-cards': Popup.afterConfirm('listArchiveCards', function() {
-    this.allCards().forEach((card) => {
-      card.archive();
+  'click .js-toggle-watch-list'() {
+    const currentList = this;
+    const level = currentList.findWatcher(Meteor.userId()) ? null : 'watching';
+    Meteor.call('watch', 'list', currentList._id, level, (err, ret) => {
+      if (!err && ret) Popup.close();
     });
-    Popup.close();
-  }),
+  },
   'click .js-close-list'(evt) {
     evt.preventDefault();
     this.archive();
-    Popup.close();
-  },
-});
-
-Template.listMoveCardsPopup.events({
-  'click .js-select-list'() {
-    const fromList = Template.parentData(2).data;
-    const toList = this._id;
-    fromList.allCards().forEach((card) => {
-      card.move(toList);
-    });
     Popup.close();
   },
 });

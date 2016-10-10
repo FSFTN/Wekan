@@ -2,13 +2,25 @@ head
   title Wekan
   meta(name="viewport"
    content="maximum-scale=1.0,width=device-width,initial-scale=1.0,user-scalable=0")
+  //- XXX We should use pathFor in the following `href` to support the case
+    where the application is deployed with a path prefix, but it seems to be
+    difficult to do that cleanly with Blaze -- at least without adding extra
+    packages.
   link(rel="shortcut icon" href="/wekan-favicon.png")
 
 template(name="userFormsLayout")
   section.auth-layout
     h1.at-form-landing-logo
-      img(src="/wekan-logo.png" alt="Wekan")
-    +Template.dynamic(template=content)
+      img(src="{{pathFor '/wekan-logo.png'}}" alt="Wekan")
+    section.auth-dialog
+      +Template.dynamic(template=content)
+      div.at-form-lang
+        select.select-lang.js-userform-set-language
+          each languages
+            if isCurrentLanguage
+              option(value="{{tag}}" selected="selected") {{name}}
+            else
+              option(value="{{tag}}") {{name}}
 
 template(name="defaultLayout")
   +header
@@ -20,6 +32,7 @@ template(name="defaultLayout")
       .modal-content
         a.modal-close-btn.js-close-modal
           i.fa.fa-times-thin
+        +Template.dynamic(template=Modal.getHeaderName)
         +Template.dynamic(template=Modal.getTemplateName)
 
 template(name="notFound")
@@ -28,5 +41,6 @@ template(name="notFound")
 template(name="message")
   .big-message.quiet(class=color)
     h1 {{_ label}}
-    with(pathFor route='atSignIn')
-      p {{{_ 'page-maybe-private' this}}}
+    unless currentUser
+      with(pathFor route='atSignIn')
+        p {{{_ 'page-maybe-private' this}}}

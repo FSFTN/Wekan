@@ -109,22 +109,22 @@ MultiSelection = {
 
   toggleRange(cardId) {
     const selectedCards = this._selectedCards.get();
-    let startRange;
     this.reset();
     if (!this.isActive() || selectedCards.length === 0) {
       this.toggle(cardId);
     } else {
-      startRange = selectedCards[selectedCards.length - 1];
+      const startRange = selectedCards[selectedCards.length - 1];
       this.toggle(getCardsBetween(startRange, cardId));
     }
   },
 
-  toggle(cardIds, options) {
+  toggle(cardIds, options = {}) {
     cardIds = _.isString(cardIds) ? [cardIds] : cardIds;
-    options = _.extend({
+    options = {
       add: true,
       remove: true,
-    }, options || {});
+      ...options,
+    };
 
     if (!this.isActive()) {
       this.reset();
@@ -133,7 +133,7 @@ MultiSelection = {
 
     const selectedCards = this._selectedCards.get();
 
-    _.each(cardIds, (cardId) => {
+    cardIds.forEach((cardId) => {
       const indexOfCard = selectedCards.indexOf(cardId);
 
       if (options.remove && indexOfCard > -1)
